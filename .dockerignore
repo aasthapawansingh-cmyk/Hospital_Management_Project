@@ -1,0 +1,7 @@
+target
+.git
+.github
+.idea
+.vscode
+test_output.log
+README.md

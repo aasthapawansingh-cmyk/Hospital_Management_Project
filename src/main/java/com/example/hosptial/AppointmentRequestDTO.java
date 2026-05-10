@@ -8,11 +8,12 @@ public class AppointmentRequestDTO {
 private LocalTime time;
 private Long patientId;
 private Long doctorId;
-private String status;
+private AppointmentStatus status;
+
 public AppointmentRequestDTO(){
 
 }
-public AppointmentRequestDTO(LocalDate date,LocalTime time,Long patientId,Long doctorId,String status){
+public AppointmentRequestDTO(LocalDate date,LocalTime time,Long patientId,Long doctorId,String AppointmentStatus){
 this.date=date;
 this.time=time;
 this.doctorId =doctorId;
@@ -35,16 +36,17 @@ public Long getDoctorId() {
     public void setDate(LocalDate date) {
         this.date = date;
     }
+
     public LocalTime getTime(){
         return time;
     }
     public void setTime(LocalTime time){
         this.time=time;
     }
-    public String getStatus(){
+    public AppointmentStatus getStatus(){
         return status;
     }
-    public void setStatus(String status){
+    public void setStatus(AppointmentStatus status){
         this.status=status;
     }
     public Long getPatientId() {

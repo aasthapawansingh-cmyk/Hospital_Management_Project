@@ -45,9 +45,6 @@ if (username != null && SecurityContextHolder.getContext().getAuthentication() =
        
     }
 }
- 
     filterChain.doFilter(request, response);
-
 }
-
 }

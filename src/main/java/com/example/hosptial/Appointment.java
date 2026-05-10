@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -16,12 +18,14 @@ public class Appointment {
 private Long id;
 private LocalDate date;
 private LocalTime time;
-private String status;
+@Enumerated(EnumType.STRING)
+private AppointmentStatus status;
+
 @ManyToOne
 private Patient patient;
 @ManyToOne
 private Doctor doctor;
-public Appointment(Long id,LocalDate date,LocalTime time,String status){
+public Appointment(Long id,LocalDate date,LocalTime time,AppointmentStatus status){
 this.id=id;
 this.date=date;
 this.time=time;
@@ -51,10 +55,10 @@ public Long getId() {
     public void setTime(LocalTime time){
         this.time=time;
     }
-    public String getStatus(){
+    public AppointmentStatus getStatus(){
         return status;
     }
-    public void setStatus(String status){
+    public void setStatus( AppointmentStatus status){
         this.status=status;
     }
     public Patient getPatient() { return patient; }

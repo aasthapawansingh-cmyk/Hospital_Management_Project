@@ -54,12 +54,8 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
 
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-.requestMatchers("/auth/**").permitAll()
-
-            .requestMatchers(HttpMethod.GET, "/api/v1/**").hasAnyRole("ADMIN", "RECEPTION")
-            .requestMatchers(HttpMethod.POST, "/api/v1/**").hasRole("ADMIN")
-            .requestMatchers(HttpMethod.PUT, "/api/v1/**").hasRole("ADMIN")
-            .requestMatchers(HttpMethod.DELETE, "/api/v1/**").hasRole("ADMIN")
+            .requestMatchers("/auth/**").permitAll()
+            .requestMatchers("/api/v1/**").authenticated()
             .anyRequest().permitAll()
         )
        .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);

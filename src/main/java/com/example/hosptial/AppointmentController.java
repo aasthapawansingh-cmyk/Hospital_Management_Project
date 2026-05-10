@@ -3,6 +3,7 @@ package com.example.hosptial;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,23 +22,28 @@ public class AppointmentController {
         this.appointmentService = appointmentService;
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public void addAppointment(@RequestBody AppointmentRequestDTO appointment) {
         appointmentService.addAppointment(appointment);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR')")
     @GetMapping
     public List<Appointment> getAllAppointments() {
         return appointmentService.getAllAppointments();
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR')")
     @GetMapping(path = "{id}")
     public Optional<Appointment> getAppointmentById(@PathVariable Long id) {
         return appointmentService.getAppointmentById(id);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("{id}")
     public void deleteAppointment(@PathVariable Long id) {
         appointmentService.deleteAppointment(id);
     }
+
 }
