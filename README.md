@@ -1,5 +1,15 @@
 # Hospital Management System
 
+## Live Demo
+🚀 Deployed at: https://hospitalmanagementproject-production.up.railway.app/swagger-ui/index.html
+
+## Quick Start (Testing the API)
+1. Use POST /auth/login with credentials
+2. Copy the JWT token from response
+3. Click **Authorize** in Swagger
+4. Paste: `Bearer your_token_here`
+5. Now test all protected endpoints
+
 ## Overview
 Hospital Management System is a Spring Boot backend application for managing patients, doctors, and appointments. The project includes JWT authentication, refresh token support, role-based authorization, validation, exception handling, AOP logging, and unit testing.
 
