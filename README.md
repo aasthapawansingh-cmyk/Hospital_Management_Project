@@ -158,7 +158,7 @@ The datasource values can be configured in `src/main/resources/application.prope
 Default local values:
 - database: `hospital_db`
 - username: `root`
-- password: `2030`
+- password: `your-mysql-password`
 
 ## Logging
 The project uses Spring AOP logging through LoggingAspect.
@@ -182,10 +182,8 @@ The project includes unit tests for service-layer behavior.
 - appointment not found during status update
 
 ## Seeded Users
-The application seeds default users on startup:
-- admin / admin123
-- doctor / doctor123
-- patient / patient123
+The application seeds default users on startup for testing.
+Credentials are configured via environment variables.
 
 ## How To Run
 
