@@ -70,20 +70,32 @@ public AuthenticationManager authenticationManager(AuthenticationConfiguration c
     return config.getAuthenticationManager();
 }
 
+
 @Bean
 public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http
-     .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .csrf(csrf -> csrf.disable())
-        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
+        .sessionManagement(session ->
+            session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        )
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+            .requestMatchers(
+                org.springframework.web.cors.CorsUtils::isPreFlightRequest
+            ).permitAll()
+            .requestMatchers(
+                "/v3/api-docs/**",
+                "/swagger-ui/**",
+                "/swagger-ui.html"
+            ).permitAll()
             .requestMatchers("/auth/**").permitAll()
             .requestMatchers("/api/v1/**").authenticated()
             .anyRequest().permitAll()
         )
-       .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
+        .addFilterBefore(
+            jwtAuthFilter(),
+            UsernamePasswordAuthenticationFilter.class
+        );
 
     return http.build();
 }
