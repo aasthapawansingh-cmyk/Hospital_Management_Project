@@ -37,6 +37,7 @@ public Patient findOrThrow(Long id){
     patient.setGender(req.getGender());
     patient.setContact(req.getContact());
     patient.setAddress(req.getAddress());
+    patient.setAccountUsername(req.getAccountUsername());
 
     return patientRepository.save(patient);
 }

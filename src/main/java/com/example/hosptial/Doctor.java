@@ -13,6 +13,8 @@ public class Doctor {
     private String name;
     private String specialization;
     private String contact;
+    @jakarta.persistence.Column(unique = true)
+    private String accountUsername;
     public  Doctor(Long id,String name,String specialization,String contact){
         this.id=id;
         this.name=name;
@@ -52,6 +54,10 @@ public class Doctor {
     public String getContact() {
         return contact;
     }
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public String getAccountUsername() { return accountUsername; }
+    public void setAccountUsername(String accountUsername) { this.accountUsername = accountUsername; }
 
     public void setContact(String contact) {
         this.contact = contact;

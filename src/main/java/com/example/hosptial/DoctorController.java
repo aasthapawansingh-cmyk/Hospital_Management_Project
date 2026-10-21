@@ -24,12 +24,12 @@ public class DoctorController {
     public void addDoctor( @RequestBody Doctor doctor){
          doctorService.addDoctor(doctor);
     }
-    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<Doctor> getAllDoctor(){
         return doctorService.getAllDoctors();
     }
-    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping(path="{id}")
     public Optional<Doctor> getDoctorById(@PathVariable Long id){
         return doctorService.getDoctorById(id);

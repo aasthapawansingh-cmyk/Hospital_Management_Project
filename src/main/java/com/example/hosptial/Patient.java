@@ -15,6 +15,8 @@ public class Patient {
     private String gender;
     private String contact;
     private String address;
+    @jakarta.persistence.Column(unique = true)
+    private String accountUsername;
 
     public Patient() {
     }
@@ -71,6 +73,10 @@ public class Patient {
     public String getAddress() {
         return address;
     }
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public String getAccountUsername() { return accountUsername; }
+    public void setAccountUsername(String accountUsername) { this.accountUsername = accountUsername; }
 
     public void setAddress(String address) {
         this.address = address;

@@ -7,6 +7,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<String> handleBadRequest(IllegalArgumentException ex) {
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
     
     @ExceptionHandler(AppointmentAlreadyBookedException.class)
 public ResponseEntity<String> handleAppointmentAlreadyBooked(AppointmentAlreadyBookedException ex) {

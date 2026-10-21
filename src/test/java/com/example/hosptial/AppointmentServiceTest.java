@@ -139,7 +139,7 @@ public class AppointmentServiceTest {
     }
 
     @Test
-    void shouldUpdateStatusFromPendingToConfirmed() {
+    void shouldUpdateStatusFromPendingToInProgress() {
         AppointmentRepository appointmentRepository = mock(AppointmentRepository.class);
         PatientRepository patientRepository = mock(PatientRepository.class);
         DoctorRepository doctorRepository = mock(DoctorRepository.class);
@@ -152,27 +152,29 @@ public class AppointmentServiceTest {
 
         AppointmentService service = new AppointmentService(appointmentRepository, patientRepository, doctorRepository);
 
-        Appointment updatedAppointment = service.updateStatus(10L, AppointmentStatus.CONFIRMED);
+        Appointment updatedAppointment = service.updateStatus(10L, AppointmentStatus.IN_PROGRESS, "admin", true, false);
 
-        assertEquals(AppointmentStatus.CONFIRMED, updatedAppointment.getStatus());
+        assertEquals(AppointmentStatus.IN_PROGRESS, updatedAppointment.getStatus());
+        assertEquals(1, updatedAppointment.getStatusHistory().size());
+        assertEquals("admin", updatedAppointment.getStatusHistory().get(0).getActorUsername());
         verify(appointmentRepository).save(appointment);
     }
 
     @Test
-    void shouldUpdateStatusFromConfirmedToCompleted() {
+    void shouldUpdateStatusFromInProgressToCompleted() {
         AppointmentRepository appointmentRepository = mock(AppointmentRepository.class);
         PatientRepository patientRepository = mock(PatientRepository.class);
         DoctorRepository doctorRepository = mock(DoctorRepository.class);
 
         Appointment appointment = new Appointment(10L, LocalDate.of(2026, 5, 1), LocalTime.of(10, 0),
-                AppointmentStatus.CONFIRMED);
+                AppointmentStatus.IN_PROGRESS);
 
         when(appointmentRepository.findById(10L)).thenReturn(Optional.of(appointment));
         when(appointmentRepository.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         AppointmentService service = new AppointmentService(appointmentRepository, patientRepository, doctorRepository);
 
-        Appointment updatedAppointment = service.updateStatus(10L, AppointmentStatus.COMPLETED);
+        Appointment updatedAppointment = service.updateStatus(10L, AppointmentStatus.COMPLETED, "doctor", false, true);
 
         assertEquals(AppointmentStatus.COMPLETED, updatedAppointment.getStatus());
         verify(appointmentRepository).save(appointment);
@@ -193,10 +195,32 @@ public class AppointmentServiceTest {
 
         InvalidAppointmentStatusException exception = assertThrows(
                 InvalidAppointmentStatusException.class,
-                () -> service.updateStatus(10L, AppointmentStatus.COMPLETED));
+                () -> service.updateStatus(10L, AppointmentStatus.COMPLETED, "doctor", false, true));
 
         assertEquals("Invalid status transition", exception.getMessage());
         verify(appointmentRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldRejectStatusChangeByUnassignedDoctor() {
+        AppointmentRepository appointments = mock(AppointmentRepository.class);
+        Appointment appointment = new Appointment(10L, LocalDate.now(), LocalTime.NOON, AppointmentStatus.PENDING);
+        when(appointments.findById(10L)).thenReturn(Optional.of(appointment));
+        AppointmentService service = new AppointmentService(appointments, mock(PatientRepository.class), mock(DoctorRepository.class));
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> service.updateStatus(10L, AppointmentStatus.IN_PROGRESS, "other-doctor", false, false));
+        verify(appointments, never()).save(any());
+    }
+
+    @Test
+    void shouldRejectSkippingInProgressAndStartingAtCompleted() {
+        AppointmentRepository appointments = mock(AppointmentRepository.class);
+        Appointment appointment = new Appointment(10L, LocalDate.now(), LocalTime.NOON, AppointmentStatus.PENDING);
+        when(appointments.findById(10L)).thenReturn(Optional.of(appointment));
+        AppointmentService service = new AppointmentService(appointments, mock(PatientRepository.class), mock(DoctorRepository.class));
+        assertThrows(InvalidAppointmentStatusException.class,
+                () -> service.updateStatus(10L, AppointmentStatus.COMPLETED, "admin", true, false));
+        verify(appointments, never()).save(any());
     }
 
     @Test
@@ -211,7 +235,7 @@ public class AppointmentServiceTest {
 
         AppointmentNotFoundException exception = assertThrows(
                 AppointmentNotFoundException.class,
-                () -> service.updateStatus(99L, AppointmentStatus.CONFIRMED));
+                () -> service.updateStatus(99L, AppointmentStatus.IN_PROGRESS, "admin", true, false));
 
         assertEquals("Appointment not found", exception.getMessage());
         verify(appointmentRepository, never()).save(any());

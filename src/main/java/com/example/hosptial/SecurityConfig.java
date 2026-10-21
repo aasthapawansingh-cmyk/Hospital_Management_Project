@@ -88,9 +88,10 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
                 "/swagger-ui/**",
                 "/swagger-ui.html"
             ).permitAll()
-            .requestMatchers("/auth/**").permitAll()
+            .requestMatchers("/auth/login", "/auth/refresh").permitAll()
+            .requestMatchers("/auth/me").authenticated()
             .requestMatchers("/api/v1/**").authenticated()
-            .anyRequest().permitAll()
+            .anyRequest().authenticated()
         )
         .addFilterBefore(
             jwtAuthFilter(),

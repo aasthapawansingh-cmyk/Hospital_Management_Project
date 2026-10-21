@@ -18,6 +18,7 @@ public class PatientReqDTO {
     private String contact;
 
     private String address;
+    private String accountUsername;
 
     public PatientReqDTO() {
     }
@@ -61,4 +62,6 @@ public class PatientReqDTO {
     public void setAddress(String address) {
         this.address = address;
     }
+    public String getAccountUsername() { return accountUsername; }
+    public void setAccountUsername(String accountUsername) { this.accountUsername = accountUsername; }
 }

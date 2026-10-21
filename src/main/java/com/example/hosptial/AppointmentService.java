@@ -2,6 +2,8 @@ package com.example.hosptial;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.stereotype.Service;
 
@@ -20,6 +22,9 @@ public AppointmentService(AppointmentRepository appointmentRepository, PatientRe
     
 }
 public void addAppointment(Appointment appointment){
+     if (appointment.getStatus() != null && appointment.getStatus() != AppointmentStatus.PENDING)
+         throw new InvalidAppointmentStatusException("New appointments must start as PENDING");
+     appointment.setStatus(AppointmentStatus.PENDING);
      appointmentRepository.save(appointment);
 }
 public List<Appointment> getAllAppointments(){
@@ -31,22 +36,19 @@ public Optional<Appointment> getAppointmentById(Long id){
 public void deleteAppointment(Long id){
      appointmentRepository.deleteById(id);
 }
-public Appointment updateStatus(Long id, AppointmentStatus newStatus){
+@Transactional
+public Appointment updateStatus(Long id, AppointmentStatus newStatus, String actor, boolean admin, boolean assignedDoctor){
     Appointment appointment = appointmentRepository.findById(id)
         .orElseThrow(() -> new AppointmentNotFoundException("Appointment not found"));
-
+    if (!admin && !assignedDoctor) throw new AccessDeniedException("Only the assigned doctor or an admin can update status");
+    if (newStatus == null) throw new InvalidAppointmentStatusException("Status is required");
 AppointmentStatus currentStatus = appointment.getStatus();
-
-if (currentStatus == AppointmentStatus.PENDING &&
-        (newStatus == AppointmentStatus.CONFIRMED || newStatus == AppointmentStatus.CANCELLED)) {
-    appointment.setStatus(newStatus);
-} else if (currentStatus == AppointmentStatus.CONFIRMED &&
-        (newStatus == AppointmentStatus.COMPLETED || newStatus == AppointmentStatus.CANCELLED)) {
-    appointment.setStatus(newStatus);
-} else {
+if (!((currentStatus == AppointmentStatus.PENDING && newStatus == AppointmentStatus.IN_PROGRESS)
+        || (currentStatus == AppointmentStatus.IN_PROGRESS && newStatus == AppointmentStatus.COMPLETED))) {
     throw new InvalidAppointmentStatusException("Invalid status transition");
 }
-
+    appointment.addStatusHistory(new AppointmentStatusHistory(appointment, currentStatus, newStatus, actor));
+    appointment.setStatus(newStatus);
 return appointmentRepository.save(appointment);
 
 }
@@ -67,7 +69,9 @@ if (appointmentRepository.existsByDoctorIdAndDateAndTime(
     Appointment appointment = new Appointment();
     appointment.setDate(request.getDate());
     appointment.setTime(request.getTime());
-    appointment.setStatus(request.getStatus());
+    if (request.getStatus() != null && request.getStatus() != AppointmentStatus.PENDING)
+        throw new InvalidAppointmentStatusException("New appointments must start as PENDING");
+    appointment.setStatus(AppointmentStatus.PENDING);
     appointment.setPatient(patient);
     appointment.setDoctor(doctor);
 
