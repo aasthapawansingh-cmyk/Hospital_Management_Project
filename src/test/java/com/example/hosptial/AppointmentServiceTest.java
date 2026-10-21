@@ -26,7 +26,7 @@ public class AppointmentServiceTest {
         LocalTime time = LocalTime.of(10, 0);
 
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
-        when(doctorRepository.findById(2L)).thenReturn(Optional.of(doctor));
+        when(doctorRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(doctor));
         when(appointmentRepository.existsByDoctorIdAndDateAndTimeAndStatusNot(2L, date, time, AppointmentStatus.CANCELLED)).thenReturn(false);
 
         AppointmentService service = new AppointmentService(appointmentRepository, patientRepository, doctorRepository);
@@ -66,7 +66,7 @@ public class AppointmentServiceTest {
         LocalTime time = LocalTime.of(10, 0);
 
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
-        when(doctorRepository.findById(2L)).thenReturn(Optional.of(doctor));
+        when(doctorRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(doctor));
         when(appointmentRepository.existsByDoctorIdAndDateAndTimeAndStatusNot(2L, date, time, AppointmentStatus.CANCELLED)).thenReturn(true);
 
         AppointmentService service = new AppointmentService(appointmentRepository, patientRepository, doctorRepository);
@@ -123,7 +123,7 @@ public class AppointmentServiceTest {
         Patient patient = new Patient(1L, "Alice", 30, "F", "9999999999", "Delhi");
 
         when(patientRepository.findById(1L)).thenReturn(Optional.of(patient));
-        when(doctorRepository.findById(2L)).thenReturn(Optional.empty());
+        when(doctorRepository.findByIdForUpdate(2L)).thenReturn(Optional.empty());
 
         AppointmentService service = new AppointmentService(appointmentRepository, patientRepository, doctorRepository);
 
@@ -152,8 +152,8 @@ public class AppointmentServiceTest {
         Patient patient = new Patient(7L, "Alice", 30, "F", "9999999999", "Delhi");
         patient.setAccountUsername("alice");
         Doctor doctor = new Doctor(2L, "Dr. Bob", "Cardiology", "8888888888");
-        when(patients.findByAccountUsername("alice")).thenReturn(Optional.of(patient));
-        when(doctors.findById(2L)).thenReturn(Optional.of(doctor));
+        when(patients.findByAccountUsernameAndArchivedFalse("alice")).thenReturn(Optional.of(patient));
+        when(doctors.findByIdForUpdate(2L)).thenReturn(Optional.of(doctor));
         when(appointments.existsByDoctorIdAndDateAndTimeAndStatusNot(anyLong(), any(), any(), eq(AppointmentStatus.CANCELLED))).thenReturn(false);
         when(appointments.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -164,6 +164,48 @@ public class AppointmentServiceTest {
         assertEquals("Follow-up", saved.getReason());
         assertEquals(AppointmentStatus.PENDING, saved.getStatus());
         verify(patients, never()).findById(anyLong());
+    }
+
+    @Test
+    void availabilityIncludesDoctorsWithFreeSlotsAndExcludesDoctorsWithPendingRequests() {
+        AppointmentRepository appointments = mock(AppointmentRepository.class);
+        PatientRepository patients = mock(PatientRepository.class);
+        DoctorRepository doctors = mock(DoctorRepository.class);
+        Doctor available = new Doctor(2L, "Dr. Free", "Cardiology", "8888888888");
+        Doctor busy = new Doctor(3L, "Dr. Busy", "Neurology", "7777777777");
+        LocalDate date = LocalDate.of(2027, 5, 1);
+        LocalTime time = LocalTime.of(10, 30);
+        when(doctors.findAll()).thenReturn(java.util.List.of(available, busy));
+        when(appointments.existsByDoctorIdAndDateAndTimeAndStatusNot(2L, date, time, AppointmentStatus.CANCELLED)).thenReturn(false);
+        when(appointments.existsByDoctorIdAndDateAndTimeAndStatusNot(3L, date, time, AppointmentStatus.CANCELLED)).thenReturn(true);
+
+        var result = new AppointmentService(appointments, patients, doctors).getAvailableDoctors(date, time);
+
+        assertEquals(java.util.List.of(available), result);
+        verify(appointments).existsByDoctorIdAndDateAndTimeAndStatusNot(3L, date, time, AppointmentStatus.CANCELLED);
+    }
+
+    @Test
+    void patientRequestRejectsSlotAlreadyTakenByPendingAppointment() {
+        AppointmentRepository appointments = mock(AppointmentRepository.class);
+        PatientRepository patients = mock(PatientRepository.class);
+        DoctorRepository doctors = mock(DoctorRepository.class);
+        Patient patient = new Patient(7L, "Alice", 30, "F", "9999999999", "Delhi");
+        Doctor doctor = new Doctor(2L, "Dr. Bob", "Cardiology", "8888888888");
+        LocalDate date = LocalDate.of(2027, 5, 1);
+        LocalTime time = LocalTime.of(10, 30);
+        when(patients.findByAccountUsernameAndArchivedFalse("alice")).thenReturn(Optional.of(patient));
+        when(doctors.findByIdForUpdate(2L)).thenReturn(Optional.of(doctor));
+        when(appointments.existsByDoctorIdAndDateAndTimeAndStatusNot(2L, date, time, AppointmentStatus.CANCELLED)).thenReturn(true);
+        PatientAppointmentRequestDTO request = new PatientAppointmentRequestDTO();
+        request.setDoctorId(2L); request.setDate(date); request.setTime(time); request.setReason("Follow-up");
+
+        AppointmentAlreadyBookedException exception = assertThrows(AppointmentAlreadyBookedException.class,
+                () -> new AppointmentService(appointments, patients, doctors).requestForPatient(request, "alice"));
+
+        assertEquals("Doctor already has an appointment at this time", exception.getMessage());
+        verify(doctors).findByIdForUpdate(2L);
+        verify(appointments, never()).save(any());
     }
 
     @Test
@@ -186,6 +228,20 @@ public class AppointmentServiceTest {
         assertEquals(1, updatedAppointment.getStatusHistory().size());
         assertEquals("admin", updatedAppointment.getStatusHistory().get(0).getActorUsername());
         verify(appointmentRepository).save(appointment);
+    }
+
+    @Test
+    void assignedDoctorCanConfirmOrRejectTheirPendingRequest() {
+        AppointmentRepository appointments = mock(AppointmentRepository.class);
+        Appointment appointment = new Appointment(12L, LocalDate.now().plusDays(1), LocalTime.NOON, AppointmentStatus.PENDING);
+        when(appointments.findById(12L)).thenReturn(Optional.of(appointment));
+        when(appointments.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        AppointmentService service = new AppointmentService(appointments, mock(PatientRepository.class), mock(DoctorRepository.class));
+
+        Appointment confirmed = service.updateStatus(12L, AppointmentStatus.CONFIRMED, "doctor", RoleName.DOCTOR, true, false);
+
+        assertEquals(AppointmentStatus.CONFIRMED, confirmed.getStatus());
+        assertEquals("doctor", confirmed.getStatusHistory().get(0).getActorUsername());
     }
 
     @Test

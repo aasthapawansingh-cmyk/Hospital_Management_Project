@@ -25,7 +25,7 @@ public class PatientServiceTest {
 
         // pageable + mock return
         Pageable pageable = Pageable.unpaged();
-        when(repo.findAll(pageable)).thenReturn(new PageImpl<>(patients));
+        when(repo.findByArchivedFalse(pageable)).thenReturn(new PageImpl<>(patients));
 
         // service uses mocked repo
         PatientService service = new PatientService(repo);

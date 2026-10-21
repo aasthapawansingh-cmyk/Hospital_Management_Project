@@ -2,6 +2,8 @@ package com.example.hosptial;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +29,13 @@ public class AppointmentService {
     public List<Appointment> getAllAppointments() { return appointmentRepository.findAll(); }
     public Optional<Appointment> getAppointmentById(Long id) { return appointmentRepository.findById(id); }
 
+    public List<Doctor> getAvailableDoctors(LocalDate date, LocalTime time) {
+        return doctorRepository.findAll().stream()
+                .filter(doctor -> !appointmentRepository.existsByDoctorIdAndDateAndTimeAndStatusNot(
+                        doctor.getId(), date, time, AppointmentStatus.CANCELLED))
+                .toList();
+    }
+
     @Transactional
     public Appointment updateStatus(Long id, AppointmentStatus target, String actor, RoleName role,
                                     boolean assignedDoctor, boolean ownPatientAppointment) {
@@ -36,7 +45,9 @@ public class AppointmentService {
         boolean allowed = switch (role) {
             case ADMIN -> (current == AppointmentStatus.PENDING && (target == AppointmentStatus.CONFIRMED || target == AppointmentStatus.CANCELLED))
                     || (current == AppointmentStatus.CONFIRMED && target == AppointmentStatus.CANCELLED);
-            case DOCTOR -> assignedDoctor && ((current == AppointmentStatus.CONFIRMED && target == AppointmentStatus.IN_PROGRESS)
+            case DOCTOR -> assignedDoctor && ((current == AppointmentStatus.PENDING
+                    && (target == AppointmentStatus.CONFIRMED || target == AppointmentStatus.CANCELLED))
+                    || (current == AppointmentStatus.CONFIRMED && target == AppointmentStatus.IN_PROGRESS)
                     || (current == AppointmentStatus.IN_PROGRESS && target == AppointmentStatus.COMPLETED));
             case PATIENT -> ownPatientAppointment && current == AppointmentStatus.PENDING && target == AppointmentStatus.CANCELLED;
         };
@@ -54,7 +65,7 @@ public class AppointmentService {
     public Appointment requestForPatient(PatientAppointmentRequestDTO request, String username) {
         Patient patient = patientRepository.findByAccountUsernameAndArchivedFalse(username)
                 .orElseThrow(() -> new PatientNotFoundException("Patient profile is not linked to this account"));
-        Doctor doctor = doctorRepository.findById(request.getDoctorId())
+        Doctor doctor = doctorRepository.findByIdForUpdate(request.getDoctorId())
                 .orElseThrow(() -> new DoctorNotFoundException("Doctor not found"));
         requireAvailable(doctor.getId(), request.getDate(), request.getTime());
         Appointment appointment = new Appointment();
@@ -71,7 +82,7 @@ public class AppointmentService {
     public Appointment addAppointment(AppointmentRequestDTO request) {
         Patient patient = patientRepository.findById(request.getPatientId())
                 .orElseThrow(() -> new PatientNotFoundException("Patient not found"));
-        Doctor doctor = doctorRepository.findById(request.getDoctorId())
+        Doctor doctor = doctorRepository.findByIdForUpdate(request.getDoctorId())
                 .orElseThrow(() -> new DoctorNotFoundException("Doctor not found"));
         if (request.getStatus() != null && request.getStatus() != AppointmentStatus.PENDING)
             throw new InvalidAppointmentStatusException("New appointments must start as PENDING");

@@ -1,7 +1,7 @@
 package com.example.hosptial;
 
-import java.util.List;
 import java.util.Optional;
+import java.util.List;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
@@ -13,16 +13,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequestMapping("api/v1/doctor")
 public class DoctorController {
     private final DoctorService doctorService;
-    private final AppointmentRepository appointmentRepository;
-    public DoctorController(DoctorService doctorService, AppointmentRepository appointmentRepository){
+    private final AppointmentService appointmentService;
+    public DoctorController(DoctorService doctorService, AppointmentService appointmentService){
         this.doctorService = doctorService;
-        this.appointmentRepository = appointmentRepository;
+        this.appointmentService = appointmentService;
     }
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
@@ -36,11 +35,9 @@ public class DoctorController {
     }
     @PreAuthorize("hasAnyRole('ADMIN','PATIENT')")
     @GetMapping("/available")
-    public List<Doctor> getAvailableDoctors(@RequestParam LocalDate date, @RequestParam LocalTime time) {
-        return doctorService.getAllDoctors().stream()
-                .filter(d -> !appointmentRepository.existsByDoctorIdAndDateAndTimeAndStatusNot(
-                        d.getId(), date, time, AppointmentStatus.CANCELLED))
-                .toList();
+    public List<Doctor> getAvailableDoctors(@org.springframework.web.bind.annotation.RequestParam LocalDate date,
+                                             @org.springframework.web.bind.annotation.RequestParam LocalTime time) {
+        return appointmentService.getAvailableDoctors(date, time);
     }
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping(path="{id}")
