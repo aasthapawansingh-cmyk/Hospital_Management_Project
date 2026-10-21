@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.http.HttpStatus;
 import com.example.hosptial.PatientRepository;
 import com.example.hosptial.DoctorRepository;
 
@@ -38,6 +40,11 @@ public class AuthController {
         result.put("patientId", patientRepository.findByAccountUsername(user.getUsername()).map(p -> p.getId()).orElse(null));
         result.put("doctorId", doctorRepository.findByAccountUsername(user.getUsername()).map(d -> d.getId()).orElse(null));
         return result;
+    }
+    @PostMapping("/logout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void logout(@AuthenticationPrincipal UserDetails principal) {
+        refreshTokenService.revokeForUser(principal.getUsername());
     }
     @PostMapping("/login")
    
