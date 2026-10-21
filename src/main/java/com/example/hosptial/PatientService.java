@@ -22,6 +22,10 @@ public Optional<Patient> getPatientById(Long id){
    return  patientRepository.findById( id);
 
 }
+public Patient findByAccountUsername(String username) {
+    return patientRepository.findByAccountUsername(username)
+            .orElseThrow(() -> new PatientNotFoundException("Patient profile is not linked to this account"));
+}
 public Patient findOrThrow(Long id){
   
     return patientRepository.findById(id)

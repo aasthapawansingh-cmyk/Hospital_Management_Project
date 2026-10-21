@@ -37,6 +37,12 @@ public class PatientController {
         return patientService.getAllPatient(pageable);
     }
 
+    @PreAuthorize("hasRole('PATIENT')")
+    @GetMapping("/me")
+    public Patient getMyProfile(@AuthenticationPrincipal UserDetails user) {
+        return patientService.findByAccountUsername(user.getUsername());
+    }
+
     @GetMapping(path = "{id}")
     @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','PATIENT')")
     public Patient getPatientById(@PathVariable Long id, @AuthenticationPrincipal UserDetails user) {

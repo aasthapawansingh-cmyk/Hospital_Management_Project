@@ -2,24 +2,23 @@ package com.example.hosptial;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 public class AppointmentRequestDTO {
-    private LocalDate date;
-private LocalTime time;
-private Long patientId;
-private Long doctorId;
+    @NotNull private LocalDate date;
+    @NotNull private LocalTime time;
+    @NotNull private Long patientId;
+    @NotNull private Long doctorId;
 private AppointmentStatus status;
+    @NotBlank @Size(max = 1000) private String reason;
 
 public AppointmentRequestDTO(){
 
 }
-public AppointmentRequestDTO(LocalDate date,LocalTime time,Long patientId,Long doctorId,String AppointmentStatus){
-this.date=date;
-this.time=time;
-this.doctorId =doctorId;
-this.patientId=patientId;
-this.status=status;
-
+public AppointmentRequestDTO(LocalDate date, LocalTime time, Long patientId, Long doctorId, AppointmentStatus status, String reason) {
+    this.date = date; this.time = time; this.patientId = patientId; this.doctorId = doctorId; this.status = status; this.reason = reason;
 }
 public Long getDoctorId() {
         return doctorId;
@@ -56,6 +55,8 @@ public Long getDoctorId() {
     public void setPatientId(Long patientId) {
         this.patientId = patientId;
     }
+    public String getReason() { return reason; }
+    public void setReason(String reason) { this.reason = reason; }
 
   
 

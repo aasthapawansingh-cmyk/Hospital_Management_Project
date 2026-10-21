@@ -22,7 +22,10 @@ public class Appointment {
 private Long id;
 private LocalDate date;
 private LocalTime time;
+@jakarta.persistence.Column(length = 1000)
+private String reason;
 @Enumerated(EnumType.STRING)
+@jakarta.persistence.Column(nullable = false)
 private AppointmentStatus status;
 
 @ManyToOne
@@ -61,6 +64,8 @@ public Long getId() {
     public void setTime(LocalTime time){
         this.time=time;
     }
+    public String getReason() { return reason; }
+    public void setReason(String reason) { this.reason = reason; }
     public AppointmentStatus getStatus(){
         return status;
     }
