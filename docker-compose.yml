@@ -1,16 +1,17 @@
 services:
-  mysql:
-    image: mysql:8.4
-    container_name: hospital-mysql
+  postgres:
+    image: postgres:16
+    container_name: hospital-postgres
     environment:
-      MYSQL_DATABASE: hospital_db
-      MYSQL_ROOT_PASSWORD: 2030
+      POSTGRES_DB: hospital_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 2030
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p2030"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hospital_db"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -19,16 +20,16 @@ services:
     build: .
     container_name: hospital-app
     depends_on:
-      mysql:
+      postgres:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/hospital_db
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: 2030
+      DATABASE_URL: jdbc:postgresql://postgres:5432/hospital_db
+      DB_USER: postgres
+      DB_PASSWORD: 2030
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
     ports:
       - "8080:8080"
     restart: unless-stopped
 
 volumes:
-  mysql_data:
+  postgres_data:
