@@ -15,6 +15,7 @@ public class PatientReqDTO {
     private String gender;
 
     @Size(min = 10, max = 10)
+    @jakarta.validation.constraints.Pattern(regexp = "[0-9]{10}")
     private String contact;
 
     private String address;

@@ -52,7 +52,7 @@ public class AppointmentService {
 
     @Transactional
     public Appointment requestForPatient(PatientAppointmentRequestDTO request, String username) {
-        Patient patient = patientRepository.findByAccountUsername(username)
+        Patient patient = patientRepository.findByAccountUsernameAndArchivedFalse(username)
                 .orElseThrow(() -> new PatientNotFoundException("Patient profile is not linked to this account"));
         Doctor doctor = doctorRepository.findById(request.getDoctorId())
                 .orElseThrow(() -> new DoctorNotFoundException("Doctor not found"));

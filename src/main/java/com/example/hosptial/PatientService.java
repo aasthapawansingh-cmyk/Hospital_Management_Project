@@ -16,21 +16,21 @@ public PatientService(PatientRepository patientRepository){
         patientRepository.save(patient);
     }
 public Page<Patient> getAllPatient(Pageable pageable){
-    return patientRepository.findAll(pageable);
+    return patientRepository.findByArchivedFalse(pageable);
 }
 public Optional<Patient> getPatientById(Long id){
    return  patientRepository.findById( id);
 
 }
 public Patient findByAccountUsername(String username) {
-    return patientRepository.findByAccountUsername(username)
+    return patientRepository.findByAccountUsernameAndArchivedFalse(username)
             .orElseThrow(() -> new PatientNotFoundException("Patient profile is not linked to this account"));
 }
 public Patient findOrThrow(Long id){
-  
-    return patientRepository.findById(id)
-    .orElseThrow(() -> new PatientNotFoundException("Patient not found"));
- 
+    Patient patient = patientRepository.findById(id)
+        .orElseThrow(() -> new PatientNotFoundException("Patient not found"));
+    if (patient.isArchived()) throw new PatientNotFoundException("Patient not found");
+    return patient;
   }
   public Patient updatePatient(Long id,PatientReqDTO req){
     
@@ -39,15 +39,18 @@ public Patient findOrThrow(Long id){
     patient.setName(req.getName());
     patient.setAge(req.getAge());
     patient.setGender(req.getGender());
-    patient.setContact(req.getContact());
+    patient.setContact(req.getContact() == null || req.getContact().isBlank() ? null : req.getContact().trim());
     patient.setAddress(req.getAddress());
-    patient.setAccountUsername(req.getAccountUsername());
+    if (req.getAccountUsername() != null && !req.getAccountUsername().isBlank()) {
+        patient.setAccountUsername(req.getAccountUsername().trim());
+    }
 
     return patientRepository.save(patient);
 }
 public void deletePatient(Long id){
-    findOrThrow(id);
-     patientRepository.deleteById(id);
+    Patient patient = findOrThrow(id);
+    patient.setArchived(true);
+    patientRepository.save(patient);
 }
 
   }

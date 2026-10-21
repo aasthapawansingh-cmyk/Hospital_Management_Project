@@ -37,7 +37,7 @@ public class AuthController {
         var result = new java.util.HashMap<String,Object>();
         result.put("username", user.getUsername());
         result.put("roles", user.getRoles().stream().map(r -> r.getName().name()).toList());
-        result.put("patientId", patientRepository.findByAccountUsername(user.getUsername()).map(p -> p.getId()).orElse(null));
+        result.put("patientId", patientRepository.findByAccountUsernameAndArchivedFalse(user.getUsername()).map(p -> p.getId()).orElse(null));
         result.put("doctorId", doctorRepository.findByAccountUsername(user.getUsername()).map(d -> d.getId()).orElse(null));
         return result;
     }

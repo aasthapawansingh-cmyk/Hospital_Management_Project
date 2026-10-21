@@ -17,6 +17,8 @@ public class Patient {
     private String address;
     @jakarta.persistence.Column(unique = true)
     private String accountUsername;
+    @jakarta.persistence.Column(nullable = false)
+    private boolean archived = false;
 
     public Patient() {
     }
@@ -77,6 +79,8 @@ public class Patient {
     @com.fasterxml.jackson.annotation.JsonIgnore
     public String getAccountUsername() { return accountUsername; }
     public void setAccountUsername(String accountUsername) { this.accountUsername = accountUsername; }
+    public boolean isArchived() { return archived; }
+    public void setArchived(boolean archived) { this.archived = archived; }
 
     public void setAddress(String address) {
         this.address = address;

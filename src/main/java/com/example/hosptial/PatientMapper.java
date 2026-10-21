@@ -7,9 +7,13 @@ public class PatientMapper {
          patient.setName(req.getName());
     patient.setAge(req.getAge());
     patient.setGender(req.getGender());
-    patient.setContact(req.getContact());
+        patient.setContact(normalize(req.getContact()));
     patient.setAddress(req.getAddress());
-        patient.setAccountUsername(req.getAccountUsername());
+        patient.setAccountUsername(normalize(req.getAccountUsername()));
        return patient;
+    }
+
+    private static String normalize(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }
