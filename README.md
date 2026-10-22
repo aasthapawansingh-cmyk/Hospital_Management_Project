@@ -37,22 +37,11 @@ Hospital Management System is a Spring Boot backend application for managing pat
 - Spring Validation
 - Spring AOP
 - JWT
-- PostgreSQL
+- MySQL
 - Maven
 - Swagger / OpenAPI
 - JUnit 5
 - Mockito
-
-## Local startup
-
-The default local datasource is PostgreSQL at `localhost:5432` with database `hospital_db`.
-To start it with Docker, run `docker compose up -d postgres`, then start the backend with
-`./mvnw spring-boot:run` (Windows: `mvnw.cmd spring-boot:run`). The frontend development
-server uses `http://localhost:8080` unless `VITE_API_BASE_URL` is set.
-
-On a fresh database, the data seeder creates `admin` / `admin123`, `doctor` / `doctor123`,
-and `patient` / `patient123`. Existing accounts keep their existing passwords.
-Set `DATABASE_URL`, `DB_USER`, and `DB_PASSWORD` to use a different database.
 
 ## Authentication And Authorization
 The project uses JWT-based authentication for protected APIs.
