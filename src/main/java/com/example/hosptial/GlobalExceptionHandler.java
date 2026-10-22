@@ -7,6 +7,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(org.springframework.dao.InvalidDataAccessResourceUsageException.class)
+    public ResponseEntity<String> handleSchemaMismatch(org.springframework.dao.InvalidDataAccessResourceUsageException ex) {
+        return new ResponseEntity<>("The database schema is missing a required column or audit table. Apply the complete V5__doctor_lifecycle_audit.sql migration, then retry.", HttpStatus.SERVICE_UNAVAILABLE);
+    }
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<String> handleBadRequest(IllegalArgumentException ex) {
         return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);

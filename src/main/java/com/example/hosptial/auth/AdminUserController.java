@@ -29,6 +29,14 @@ public class AdminUserController {
     public java.util.List<Map<String,Object>> list() {
         return users.findAll().stream().map(u -> Map.<String,Object>of("id",u.getId(),"username",u.getUsername(),"roles",u.getRoles().stream().map(r -> r.getName().name()).toList())).toList();
     }
+    @GetMapping("/unlinked-profiles")
+    public Map<String,Object> unlinkedProfiles() {
+        var doctorProfiles = doctors.findAll().stream().filter(d -> d.isActive() && blank(d.getAccountUsername()))
+                .map(d -> Map.<String,Object>of("id", d.getId(), "name", d.getName(), "detail", d.getSpecialization())).toList();
+        var patientProfiles = patients.findByArchivedFalse(org.springframework.data.domain.PageRequest.of(0, 1000)).getContent().stream()
+                .filter(p -> blank(p.getAccountUsername())).map(p -> Map.<String,Object>of("id", p.getId(), "name", p.getName(), "detail", "Patient profile")).toList();
+        return Map.of("doctors", doctorProfiles, "patients", patientProfiles);
+    }
     @PostMapping
     @Transactional
     public Map<String,Object> create(@RequestBody CreateUserRequest request) {
@@ -41,13 +49,27 @@ public class AdminUserController {
         AuthUser saved = users.save(new AuthUser(request.getUsername(), passwords.encode(request.getPassword()), Set.of(role)));
         Long profileId;
         if (request.getRole() == RoleName.DOCTOR) {
-            if (blank(request.getName()) || blank(request.getSpecialization())) throw new IllegalArgumentException("Doctor name and specialization are required");
-            Doctor doctor = new Doctor(); doctor.setName(request.getName().trim()); doctor.setSpecialization(request.getSpecialization().trim());
-            doctor.setContact(request.getContact()); doctor.setAccountUsername(saved.getUsername()); profileId = doctors.save(doctor).getId();
+            if (request.getPatientId() != null) throw new IllegalArgumentException("A doctor account cannot be linked to a patient record");
+            if (request.getDoctorId() != null) {
+                Doctor doctor = doctors.findById(request.getDoctorId()).orElseThrow(() -> new IllegalArgumentException("Doctor profile not found"));
+                if (!doctor.isActive() || !blank(doctor.getAccountUsername())) throw new IllegalArgumentException("Choose an active doctor profile that has no linked login");
+                doctor.setAccountUsername(saved.getUsername()); profileId = doctors.save(doctor).getId();
+            } else {
+                if (blank(request.getName()) || blank(request.getSpecialization())) throw new IllegalArgumentException("Doctor name and specialization are required");
+                Doctor doctor = new Doctor(); doctor.setName(request.getName().trim()); doctor.setSpecialization(request.getSpecialization().trim());
+                doctor.setContact(request.getContact()); doctor.setAccountUsername(saved.getUsername()); profileId = doctors.save(doctor).getId();
+            }
         } else {
-            if (blank(request.getName()) || request.getAge() == null || request.getAge() < 0 || blank(request.getGender())) throw new IllegalArgumentException("Patient name, valid age, and gender are required");
-            Patient patient = new Patient(); patient.setName(request.getName().trim()); patient.setAge(request.getAge()); patient.setGender(request.getGender().trim());
-            patient.setContact(request.getContact()); patient.setAddress(request.getAddress()); patient.setAccountUsername(saved.getUsername()); profileId = patients.save(patient).getId();
+            if (request.getDoctorId() != null) throw new IllegalArgumentException("A patient account cannot be linked to a doctor record");
+            if (request.getPatientId() != null) {
+                Patient patient = patients.findById(request.getPatientId()).orElseThrow(() -> new IllegalArgumentException("Patient profile not found"));
+                if (patient.isArchived() || !blank(patient.getAccountUsername())) throw new IllegalArgumentException("Choose an active patient profile that has no linked login");
+                patient.setAccountUsername(saved.getUsername()); profileId = patients.save(patient).getId();
+            } else {
+                if (blank(request.getName()) || request.getAge() == null || request.getAge() < 0 || blank(request.getGender())) throw new IllegalArgumentException("Patient name, valid age, and gender are required");
+                Patient patient = new Patient(); patient.setName(request.getName().trim()); patient.setAge(request.getAge()); patient.setGender(request.getGender().trim());
+                patient.setContact(request.getContact()); patient.setAddress(request.getAddress()); patient.setAccountUsername(saved.getUsername()); profileId = patients.save(patient).getId();
+            }
         }
         return Map.of("id", saved.getId(), "profileId", profileId, "username", saved.getUsername(), "roles", java.util.List.of(request.getRole().name()));
     }
@@ -62,7 +84,7 @@ public class AdminUserController {
     }
     private static boolean blank(String value) { return value == null || value.isBlank(); }
     public static class CreateUserRequest {
-        private String username; private String password; private RoleName role; private String name; private String specialization; private String contact; private String address; private String gender; private Integer age;
+        private String username; private String password; private RoleName role; private String name; private String specialization; private String contact; private String address; private String gender; private Integer age; private Long doctorId; private Long patientId;
         public String getUsername(){return username;} public void setUsername(String v){username=v;}
         public String getPassword(){return password;} public void setPassword(String v){password=v;}
         public RoleName getRole(){return role;} public void setRole(RoleName v){role=v;}
@@ -72,5 +94,7 @@ public class AdminUserController {
         public String getAddress(){return address;} public void setAddress(String v){address=v;}
         public String getGender(){return gender;} public void setGender(String v){gender=v;}
         public Integer getAge(){return age;} public void setAge(Integer v){age=v;}
+        public Long getDoctorId(){return doctorId;} public void setDoctorId(Long v){doctorId=v;}
+        public Long getPatientId(){return patientId;} public void setPatientId(Long v){patientId=v;}
     }
 }
