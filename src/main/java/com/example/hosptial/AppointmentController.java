@@ -33,6 +33,13 @@ public class AppointmentController {
         return appointmentService.addAppointment(appointment);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
+    @org.springframework.web.bind.annotation.PatchMapping("{id}/schedule")
+    public Appointment reschedule(@PathVariable Long id, @Valid @RequestBody AppointmentRescheduleRequest request,
+                                  @AuthenticationPrincipal UserDetails user) {
+        return appointmentService.reschedule(id, request, user.getUsername());
+    }
+
     @PreAuthorize("hasRole('PATIENT')")
     @PostMapping("/request")
     public Appointment requestAppointment(@Valid @RequestBody PatientAppointmentRequestDTO request,
@@ -68,7 +75,7 @@ public class AppointmentController {
         access.requireAppointmentAccess(user.getUsername(), appointment);
         RoleName role = admin ? RoleName.ADMIN : user.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_DOCTOR")) ? RoleName.DOCTOR : RoleName.PATIENT;
-        return appointmentService.updateStatus(id, request.getStatus(), user.getUsername(), role, assignedDoctor, ownPatientAppointment);
+        return appointmentService.updateStatus(id, request.getStatus(), user.getUsername(), role, assignedDoctor, ownPatientAppointment, request.getReason());
     }
 
 }

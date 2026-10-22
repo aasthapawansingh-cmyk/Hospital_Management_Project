@@ -36,7 +36,7 @@ String username = jwtservice.extractUsername(token);
 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-    if (jwtservice.isTokenValid(token, userDetails.getUsername())) {
+    if (userDetails.isEnabled() && jwtservice.isTokenValid(token, userDetails.getUsername())) {
         UsernamePasswordAuthenticationToken authToken =
                 new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 

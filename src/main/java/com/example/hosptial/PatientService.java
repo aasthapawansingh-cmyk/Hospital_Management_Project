@@ -5,14 +5,21 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.example.hosptial.auth.UserRepository;
+import com.example.hosptial.auth.RoleName;
 
 @Service
 public class PatientService {
     private final PatientRepository  patientRepository ;
+    private UserRepository users;
 public PatientService(PatientRepository patientRepository){
     this.patientRepository = patientRepository;
 }
+@Autowired
+public void setUserRepository(UserRepository users) { this.users = users; }
    public void addPatient(Patient patient){
+        validatePatientAccount(patient.getAccountUsername());
         patientRepository.save(patient);
     }
 public Page<Patient> getAllPatient(Pageable pageable){
@@ -42,10 +49,20 @@ public Patient findOrThrow(Long id){
     patient.setContact(req.getContact() == null || req.getContact().isBlank() ? null : req.getContact().trim());
     patient.setAddress(req.getAddress());
     if (req.getAccountUsername() != null && !req.getAccountUsername().isBlank()) {
-        patient.setAccountUsername(req.getAccountUsername().trim());
+        String requestedUsername = req.getAccountUsername().trim();
+        if (patient.getAccountUsername() != null && !patient.getAccountUsername().equals(requestedUsername))
+            throw new IllegalArgumentException("A linked patient login cannot be changed here; create or link the account through administration");
+        validatePatientAccount(requestedUsername);
+        patient.setAccountUsername(requestedUsername);
     }
 
     return patientRepository.save(patient);
+}
+private void validatePatientAccount(String username) {
+    if (username == null || username.isBlank() || users == null) return;
+    var account = users.findByUsername(username.trim()).orElseThrow(() -> new IllegalArgumentException("Linked patient account does not exist"));
+    if (account.getRoles().stream().noneMatch(role -> role.getName() == RoleName.PATIENT))
+        throw new IllegalArgumentException("Linked account must have the PATIENT role");
 }
 public void deletePatient(Long id){
     Patient patient = findOrThrow(id);

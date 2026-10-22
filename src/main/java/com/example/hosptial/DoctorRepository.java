@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface DoctorRepository extends JpaRepository<Doctor, Long>{
     java.util.Optional<Doctor> findByAccountUsername(String username);
+    java.util.List<Doctor> findByActiveTrue();
 
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @org.springframework.data.jpa.repository.Query("select d from Doctor d where d.id = :id")

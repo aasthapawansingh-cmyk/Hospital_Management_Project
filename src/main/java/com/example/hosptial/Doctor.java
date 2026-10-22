@@ -13,6 +13,8 @@ public class Doctor {
     private String name;
     private String specialization;
     private String contact;
+    @jakarta.persistence.Column(nullable = false)
+    private boolean active = true;
     @jakarta.persistence.Column(unique = true)
     private String accountUsername;
     public  Doctor(Long id,String name,String specialization,String contact){
@@ -62,6 +64,9 @@ public class Doctor {
     public void setContact(String contact) {
         this.contact = contact;
     }
+
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
 
 
 }

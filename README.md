@@ -245,3 +245,10 @@ After the application starts, open:
 - Datasource settings are passed through environment variables in `docker-compose.yml`
 - `spring.jpa.hibernate.ddl-auto` is set to `update` for development convenience
 - Change default credentials before using this setup outside local development
+
+## Existing PostgreSQL deployment update
+Before deploying doctor activation/deactivation changes to an existing PostgreSQL database, run
+`src/main/resources/db/migration/V5__doctor_lifecycle_audit.sql` once in the database SQL console.
+It adds `doctor.active` and `auth_user.enabled` with `true` defaults (existing records remain active),
+and creates the doctor-status, appointment-assignment, and appointment-rescheduling audit tables. This project does not currently
+run these SQL files automatically through Flyway.

@@ -34,6 +34,10 @@ private Patient patient;
 private Doctor doctor;
 @OneToMany(mappedBy = "appointment", cascade = CascadeType.ALL, orphanRemoval = true)
 private List<AppointmentStatusHistory> statusHistory = new ArrayList<>();
+@OneToMany(mappedBy = "appointment", cascade = CascadeType.ALL, orphanRemoval = true)
+private List<AppointmentAssignmentHistory> assignmentHistory = new ArrayList<>();
+@OneToMany(mappedBy = "appointment", cascade = CascadeType.ALL, orphanRemoval = true)
+private List<AppointmentScheduleHistory> scheduleHistory = new ArrayList<>();
 public Appointment(Long id,LocalDate date,LocalTime time,AppointmentStatus status){
 this.id=id;
 this.date=date;
@@ -79,6 +83,10 @@ public Doctor getDoctor() { return doctor; }
 public void setDoctor(Doctor doctor) { this.doctor = doctor; }
 public List<AppointmentStatusHistory> getStatusHistory() { return statusHistory; }
 public void addStatusHistory(AppointmentStatusHistory entry) { statusHistory.add(entry); }
+public List<AppointmentAssignmentHistory> getAssignmentHistory() { return assignmentHistory; }
+public void addAssignmentHistory(AppointmentAssignmentHistory entry) { assignmentHistory.add(entry); }
+public List<AppointmentScheduleHistory> getScheduleHistory() { return scheduleHistory; }
+public void addScheduleHistory(AppointmentScheduleHistory entry) { scheduleHistory.add(entry); }
 
 
 

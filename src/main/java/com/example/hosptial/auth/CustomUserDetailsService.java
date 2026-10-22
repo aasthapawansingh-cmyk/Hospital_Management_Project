@@ -10,9 +10,10 @@ import org.springframework.stereotype.Service;
 public class CustomUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
+    private final com.example.hosptial.DoctorRepository doctorRepository;
 
-    public CustomUserDetailsService(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public CustomUserDetailsService(UserRepository userRepository, com.example.hosptial.DoctorRepository doctorRepository) {
+        this.userRepository = userRepository; this.doctorRepository = doctorRepository;
     }
 
     @Override
@@ -23,10 +24,18 @@ public class CustomUserDetailsService implements UserDetailsService {
         return new User(
             user.getUsername(),
             user.getPassword(),
+            user.isEnabled() && (!user.getRoles().stream().anyMatch(role -> role.getName() == RoleName.DOCTOR)
+                || isLinkedDoctorActive(username)),
+            true, true, true,
             user.getRoles().stream()
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName().name()))
                 .collect(Collectors.toList())
         );
     }
+
+    private boolean isLinkedDoctorActive(String username) {
+        return doctorRepository.findByAccountUsername(username).map(com.example.hosptial.Doctor::isActive).orElse(true);
+    }
+
 }
 

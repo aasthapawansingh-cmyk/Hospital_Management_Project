@@ -175,7 +175,7 @@ public class AppointmentServiceTest {
         Doctor busy = new Doctor(3L, "Dr. Busy", "Neurology", "7777777777");
         LocalDate date = LocalDate.of(2027, 5, 1);
         LocalTime time = LocalTime.of(10, 30);
-        when(doctors.findAll()).thenReturn(java.util.List.of(available, busy));
+        when(doctors.findByActiveTrue()).thenReturn(java.util.List.of(available, busy));
         when(appointments.existsByDoctorIdAndDateAndTimeAndStatusNot(2L, date, time, AppointmentStatus.CANCELLED)).thenReturn(false);
         when(appointments.existsByDoctorIdAndDateAndTimeAndStatusNot(3L, date, time, AppointmentStatus.CANCELLED)).thenReturn(true);
 
@@ -329,6 +329,50 @@ public class AppointmentServiceTest {
         assertThrows(InvalidAppointmentStatusException.class,
                 () -> service.updateStatus(10L, AppointmentStatus.COMPLETED, "admin", RoleName.ADMIN, false, false));
         verify(appointments, never()).save(any());
+    }
+
+    @Test
+    void adminMayCorrectClinicalProgressOnlyWithAuditedReason() {
+        AppointmentRepository appointments = mock(AppointmentRepository.class);
+        Appointment appointment = new Appointment(44L, LocalDate.now(), LocalTime.NOON, AppointmentStatus.CONFIRMED);
+        when(appointments.findById(44L)).thenReturn(Optional.of(appointment));
+        when(appointments.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        AppointmentService service = new AppointmentService(appointments, mock(PatientRepository.class), mock(DoctorRepository.class));
+        assertThrows(InvalidAppointmentStatusException.class, () -> service.updateStatus(44L, AppointmentStatus.IN_PROGRESS, "admin", RoleName.ADMIN, false, false));
+        Appointment corrected = service.updateStatus(44L, AppointmentStatus.IN_PROGRESS, "admin", RoleName.ADMIN, false, false, "Corrected after chart review");
+        assertEquals(AppointmentStatus.IN_PROGRESS, corrected.getStatus());
+        assertEquals("Corrected after chart review", corrected.getStatusHistory().get(0).getReason());
+    }
+
+    @Test
+    void adminReschedulesWithSlotRecheckAndScheduleAudit() {
+        AppointmentRepository appointments = mock(AppointmentRepository.class);
+        DoctorRepository doctors = mock(DoctorRepository.class);
+        Doctor previous = new Doctor(2L, "Old", "Cardiology", "111");
+        Doctor replacement = new Doctor(3L, "New", "Cardiology", "222");
+        Appointment appointment = new Appointment(45L, LocalDate.of(2027, 5, 1), LocalTime.of(10, 0), AppointmentStatus.CONFIRMED);
+        appointment.setDoctor(previous);
+        when(appointments.findById(45L)).thenReturn(Optional.of(appointment));
+        when(doctors.findByIdForUpdate(3L)).thenReturn(Optional.of(replacement));
+        when(appointments.existsByDoctorIdAndDateAndTimeAndStatusNotAndIdNot(3L, LocalDate.of(2027, 5, 2), LocalTime.NOON, AppointmentStatus.CANCELLED, 45L)).thenReturn(false);
+        when(appointments.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        AppointmentRescheduleRequest request = new AppointmentRescheduleRequest(); request.setDoctorId(3L); request.setDate(LocalDate.of(2027, 5, 2)); request.setTime(LocalTime.NOON); request.setReason("Clinician unavailable");
+        Appointment updated = new AppointmentService(appointments, mock(PatientRepository.class), doctors).reschedule(45L, request, "admin");
+        assertEquals(replacement, updated.getDoctor()); assertEquals(LocalDate.of(2027, 5, 2), updated.getDate());
+        assertEquals("Clinician unavailable", updated.getScheduleHistory().get(0).getReason());
+        assertEquals("admin", updated.getScheduleHistory().get(0).getActorUsername());
+    }
+
+    @Test
+    void adminRescheduleRejectsTakenSlot() {
+        AppointmentRepository appointments = mock(AppointmentRepository.class); DoctorRepository doctors = mock(DoctorRepository.class);
+        Appointment appointment = new Appointment(46L, LocalDate.now().plusDays(1), LocalTime.NOON, AppointmentStatus.PENDING);
+        when(appointments.findById(46L)).thenReturn(Optional.of(appointment));
+        when(doctors.findByIdForUpdate(3L)).thenReturn(Optional.of(new Doctor(3L, "New", "General", "222")));
+        when(appointments.existsByDoctorIdAndDateAndTimeAndStatusNotAndIdNot(anyLong(), any(), any(), any(), eq(46L))).thenReturn(true);
+        AppointmentRescheduleRequest request = new AppointmentRescheduleRequest(); request.setDoctorId(3L); request.setDate(LocalDate.now().plusDays(2)); request.setTime(LocalTime.NOON); request.setReason("Clinic change");
+        assertThrows(AppointmentAlreadyBookedException.class, () -> new AppointmentService(appointments, mock(PatientRepository.class), doctors).reschedule(46L, request, "admin"));
+        assertTrue(appointment.getScheduleHistory().isEmpty()); verify(appointments, never()).save(any());
     }
 
     @Test
