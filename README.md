@@ -1,254 +1,131 @@
 # Hospital Management System
 
-## Live Demo
-🚀 Deployed at: https://hospitalmanagementproject-production.up.railway.app/swagger-ui/index.html
+A role-based hospital management application with a Spring Boot REST API and a React frontend.
 
-## Quick Start (Testing the API)
-1. Use POST /auth/login with credentials
-2. Copy the JWT token from response
-3. Click **Authorize** in Swagger
-4. Paste: `Bearer your_token_here`
-5. Now test all protected endpoints
+## Live deployment
 
-## Overview
-Hospital Management System is a Spring Boot backend application for managing patients, doctors, and appointments. The project includes JWT authentication, refresh token support, role-based authorization, validation, exception handling, AOP logging, and unit testing.
+- **Frontend:** [Hospital Management UI](https://hospital-frontend-beta-six.vercel.app)
+- **Backend API:** [Render service](https://hospital-backend-fyo4.onrender.com)
+- **Swagger UI:** [API documentation](https://hospital-backend-fyo4.onrender.com/swagger-ui/index.html)
+
+The backend uses PostgreSQL. The frontend is deployed on Vercel and calls the Render backend.
 
 ## Features
-- Patient CRUD operations
-- Doctor management
-- Appointment booking
-- JWT authentication
-- Refresh token flow
-- Role-based access control
-- DTO-based request handling
-- Booking conflict validation
-- Appointment status transition logic
-- Global exception handling
-- AOP logging
-- Unit testing
-- Swagger API documentation
 
-## Tech Stack
-- Java 17
-- Spring Boot 3
-- Spring Web
-- Spring Data JPA
-- Spring Security
-- Spring Validation
-- Spring AOP
-- JWT
-- MySQL
-- Maven
-- Swagger / OpenAPI
-- JUnit 5
-- Mockito
+- JWT login and refresh tokens with `ADMIN`, `DOCTOR`, and `PATIENT` roles.
+- Role-specific dashboards and server-side record access checks.
+- Patient appointment requests, availability checks, doctor assignment, and booking conflict protection.
+- Appointment status workflow and audit history.
+- Admin doctor activation/deactivation, patient and doctor management, user-account linking, and appointment scheduling.
+- Doctor-only AI visit summary drafts. A draft is not saved automatically and requires clinician review.
 
-## Authentication And Authorization
-The project uses JWT-based authentication for protected APIs.
+## Technology
 
-### Auth Endpoints
-- `POST /auth/login`
-- `POST /auth/refresh`
+- Java 17, Spring Boot 3, Spring Web, Spring Data JPA, Spring Security, Spring Validation
+- PostgreSQL
+- React, Vite, Axios, React Router
+- Maven, JUnit 5, Mockito
+- Groq-compatible chat completions API for clinician summary drafts
 
-### Auth Flow
-1. User logs in using username and password
-2. Server returns:
-   - `token`
-   - `refreshToken`
-3. The access token is sent in the `Authorization` header for protected requests
-4. The refresh token is used to generate a new access token when the current one expires
+## Authentication
 
-Example header:
+### Endpoints
+
+- `POST /auth/login` — returns an access token and refresh token.
+- `POST /auth/refresh` — exchanges a refresh token for a new access token.
+- `POST /auth/logout` — revokes the user's refresh session.
+- `GET /auth/me` — returns the authenticated username, role, and linked profile ID.
+
+For protected API requests, send:
 
 ```http
-Authorization: Bearer your_jwt_token
+Authorization: Bearer <access-token>
 ```
 
-## Roles
-The system currently defines these roles:
-- ADMIN
-- DOCTOR
-- PATIENT
+Roles are determined from the authenticated server-side account. The API enforces access to patient-owned data and doctor-assigned appointments on the server.
 
-### Current Access Rules
-- ADMIN can manage patient, doctor, and appointment records
-- DOCTOR can access read operations on allowed modules
-- PATIENT exists in authentication data but currently has no dedicated controller permissions
+## Appointment workflow
 
-## API Modules
+Appointment statuses are `PENDING`, `CONFIRMED`, `IN_PROGRESS`, `COMPLETED`, and `CANCELLED`.
 
-### Auth Module
-- POST /auth/login
-- POST /auth/refresh
+- Patients can request an appointment as `PENDING` and cancel their own pending request.
+- Doctors can act only on appointments assigned to them. They can confirm or reject pending requests, start a confirmed visit, and complete an in-progress visit.
+- Admins can create and schedule appointments, confirm or cancel requests, and reschedule appointments. Administrative corrections to clinical progress require a reason.
+- Status, assignment, and schedule changes are recorded in history tables.
+- The server checks doctor availability again when creating or rescheduling an appointment.
 
-### Patient Module
-- POST /api/v1/patient
-- GET /api/v1/patient
-- GET /api/v1/patient/{id}
-- PUT /api/v1/patient/{id}
-- DELETE /api/v1/patient/{id}
+### Useful API routes
 
-### Doctor Module
-- POST /api/v1/doctor
-- GET /api/v1/doctor
-- GET /api/v1/doctor/{id}
-- DELETE /api/v1/doctor/{id}
+- `GET /api/v1/appointment` — appointments visible to the signed-in role.
+- `POST /api/v1/appointment` — admin creates a pending appointment.
+- `POST /api/v1/appointment/request` — patient requests an appointment.
+- `GET /api/v1/doctor/available?date=YYYY-MM-DD&time=HH:mm:ss` — checks available doctors.
+- `PATCH /api/v1/appointment/{id}/status` — submits a workflow transition.
+- `POST /api/v1/appointment/{id}/ai-summary-draft` — assigned doctor requests an AI draft.
 
-### Appointment Module
-- POST /api/v1/appointment
-- GET /api/v1/appointment
-- GET /api/v1/appointment/{id}
-- DELETE /api/v1/appointment/{id}
+The AI endpoint accepts clinician notes and returns a draft with `requiresClinicianReview: true`. It does not save a patient record or change appointment status. Notes are sent to the configured AI provider; use only de-identified notes unless the provider is approved for sensitive patient data.
 
-## DTO Usage
-The project uses DTOs to structure request data more cleanly.
+## Configuration
 
-Examples include:
-- PatientReqDTO
-- AppointmentRequestDTO
-- LoginRequest
-- RefreshTokenRequest
+The application reads database settings from environment variables:
 
-## Validation And Business Rules
-The application includes validation and business rules to maintain clean and safe data handling.
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL JDBC URL, for example `jdbc:postgresql://localhost:5432/hospital_db` |
+| `DB_USER` | PostgreSQL username |
+| `DB_PASSWORD` | PostgreSQL password |
+| `PORT` | HTTP port; Render provides this for the deployed service |
+| `GROQ_API_KEY` | API key for AI draft generation |
+| `VITE_API_BASE_URL` | Optional frontend API base URL; defaults to the Render backend URL in production |
 
-### Patient Validation
-Patient request data is validated for:
-- required name
-- age greater than 0
-- required gender
-- contact length of exactly 10 characters
+Do not commit real passwords or API keys. The local profile is `application-local.properties`; activate it with `SPRING_PROFILES_ACTIVE=local`. Its defaults are intended for local development only.
 
-### Appointment Booking Rules
-- an appointment cannot be booked if the doctor already has another appointment at the same date and time
-- patient and doctor must exist before an appointment can be created
+## Run locally
 
-## Appointment Status Flow
-The appointment service contains status transition logic.
+### Backend
 
-### Supported Status Values
-- PENDING
-- CONFIRMED
-- COMPLETED
-- CANCELLED
+1. Start PostgreSQL and create a database named `hospital_db`.
+2. Set `SPRING_PROFILES_ACTIVE=local` and configure `DB_USER` and `DB_PASSWORD` for your local PostgreSQL instance.
+3. From `hospital_management`, run:
 
-### Allowed Transitions
-- PENDING -> CONFIRMED
-- PENDING -> CANCELLED
-- CONFIRMED -> COMPLETED
-- CONFIRMED -> CANCELLED
+   ```powershell
+   .\mvnw.cmd spring-boot:run
+   ```
 
-Invalid transitions throw a custom exception.
+4. Open Swagger UI at `http://localhost:8080/swagger-ui/index.html`.
 
-Note: the status transition logic is implemented in the service layer.
+Run backend tests with:
 
-## Exception Handling
-The project uses custom exceptions and a global exception handler for cleaner API responses.
-
-### Custom Exceptions Included
-- PatientNotFoundException
-- DoctorNotFoundException
-- AppointmentNotFoundException
-- AppointmentAlreadyBookedException
-- InvalidAppointmentStatusException
-
-These exceptions are handled centrally using GlobalExceptionHandler.
-
-## Database Setup
-This project uses MySQL.
-
-For local development, create the database before running the application:
-
-```sql
-CREATE DATABASE hospital_db;
+```powershell
+.\mvnw.cmd test
 ```
 
-The datasource values can be configured in `src/main/resources/application.properties` or overridden with environment variables.
+### Frontend
 
-Default local values:
-- database: `hospital_db`
-- username: `root`
-- password: `your-mysql-password`
+From `hospital-frontend`:
 
-## Logging
-The project uses Spring AOP logging through LoggingAspect.
-
-Current logging behavior:
-- logs service method calls before execution
-
-This helps track business-layer activity more clearly.
-
-## Testing
-The project includes unit tests for service-layer behavior.
-
-### Covered Areas
-- patient service retrieval
-- successful appointment booking
-- duplicate appointment prevention
-- patient not found case
-- doctor not found case
-- valid appointment status transitions
-- invalid appointment status transitions
-- appointment not found during status update
-
-## Seeded Users
-The application seeds default users on startup for testing.
-Credentials are configured via environment variables.
-
-## How To Run
-
-### Run Locally
-1. Start MySQL
-2. Create the `hospital_db` database
-3. Update database username and password if needed
-4. Run the application:
-
-```bash
-mvn spring-boot:run
+```powershell
+npm install
+npm run dev
 ```
 
-### Run Tests
+The development frontend uses `http://localhost:8080` as its API by default. To build and lint:
 
-```bash
-mvn test
+```powershell
+npm run build
+npm run lint
 ```
 
-### Run With Docker
-Make sure Docker Desktop is running, then start the application and MySQL together:
+## Database schema updates
 
-```bash
-docker compose up --build
-```
+SQL scripts are in `src/main/resources/db/migration`. They are **not applied automatically by Flyway** in this project. For an existing PostgreSQL database, review and apply the applicable scripts in version order before deploying code that depends on their schema changes. Back up the database before applying schema updates.
 
-This will start:
-- MySQL on port `3306`
-- Spring Boot application on port `8080`
+Hibernate is configured with `ddl-auto=update` for development. This does not replace the SQL migrations or safely handle every existing-schema change.
 
-Stop the containers with:
+## Demo accounts
 
-```bash
-docker compose down
-```
+The development seeder creates demo accounts when their usernames do not already exist. These accounts are for local testing only. Replace or remove demo credentials and seeding behavior before using the application with real users.
 
-If you also want to remove the MySQL volume:
+## Docker note
 
-```bash
-docker compose down -v
-```
-
-## Swagger Documentation
-After the application starts, open:
-- `http://localhost:8080/swagger-ui/index.html`
-
-## Docker Notes
-- The app container connects to MySQL using the service name `mysql`
-- Datasource settings are passed through environment variables in `docker-compose.yml`
-- `spring.jpa.hibernate.ddl-auto` is set to `update` for development convenience
-- Change default credentials before using this setup outside local development
-
-## Existing PostgreSQL deployment update
-Before deploying doctor activation/deactivation changes to an existing PostgreSQL database, run
-`src/main/resources/db/migration/V5__doctor_lifecycle_audit.sql` once in the database SQL console.
-It adds `doctor.active` and `auth_user.enabled` with `true` defaults (existing records remain active),
-and creates the doctor-status, appointment-assignment, and appointment-rescheduling audit tables. This project does not currently
-run these SQL files automatically through Flyway.
+The current `docker-compose.yml` still defines a MySQL service, while this application is configured with the PostgreSQL JDBC driver. Do not use that Compose setup for the PostgreSQL deployment described above; update the Compose configuration separately if you want a PostgreSQL-based local stack.
