@@ -1,4 +1,4 @@
-# Hospital Management System
+# CareSync
 
 A role-based hospital management application with a Spring Boot REST API and a React frontend.
 
